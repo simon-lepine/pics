@@ -53,20 +53,50 @@ if (
 }
 
 /**
+ * get raw/timestamp name
+ */
+$file_extension = pathinfo($objects['Contents'][0]['Key'], PATHINFO_EXTENSION);
+$timestamp_name = str_ireplace(
+	array('A', '-', $file_extension, '.'), 
+	'', 
+	$objects['Contents'][0]['Key']
+);
+$timestamp_name = trim($timestamp_name);
+
+/**
  * rename if object is not named for unix timestamp
  * //note this helps us organize from newest to oldest
  */
 $new_name = $objects['Contents'][0]['Key'];
 if (
-	(!is_numeric($objects['Contents'][0]['Key']))
+	(!is_numeric($timestamp_name))
 	||
-	($objects['Contents'][0]['Key'] < 1000)
+	($timestamp_name < 1000)
 	||
-	($objects['Contents'][0]['Key'] > time())
+	($timestamp_name > time())
 ){
+
 	$s3->registerStreamWrapper();
+
 	$new_name = $objects['Contents'][0]['LastModified']->format('U');
-	rename("s3://{$aws_bucket}/{$objects['Contents'][0]['Key']}", "s3://{$aws_bucket}/{$new_name}");
+
+	if (stripos($objects['Contents'][0]['Key'], 'IMG_') !== false){
+		$new_name = str_replace(
+			array('IMG_', '_', '.', $file_extension), 
+			' ', 
+			$objects['Contents'][0]['Key']
+		);
+		$new_name = trim($new_name);
+		if (!$new_name = strtotime($new_name)){
+			$new_name = $objects['Contents'][0]['LastModified']->format('U');
+		}
+	}
+
+	if (floatval($new_name)){
+		$timestamp_name = $new_name;
+		$new_name = "-{$new_name}";
+		rename("s3://{$aws_bucket}/{$objects['Contents'][0]['Key']}", "s3://{$aws_bucket}/{$new_name}");
+	}
 }
 
 /**
@@ -85,6 +115,7 @@ $image_url = $request->getUri();
  * init delay time
  */
 $delay = 120;
+$delay = 2;//debug
 if (
 	(!empty($_GET['delay']))
 	&&
@@ -103,7 +134,7 @@ header("Refresh:{$delay};url=?start={$new_name}");
 /**
  * output image
  */
-$title = date('Y-m-d H:i', $new_name);
+$title = date('Y-m-d H:i', $timestamp_name);
 echo <<<m_echo
 
 	<style>
