@@ -2,6 +2,8 @@
 
 include 'settings.inc.php';
 require "{$compoer_dir}autoload.php";
+include 'aws_cache.php';
+ksort($aws_cache);
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
@@ -16,87 +18,63 @@ $s3 = new S3Client([
 ]);
 
 /**
- * init starting point
- */
-$start = '';
-if (!empty($_GET['start'])){
-	$start = $_GET['start'] . '';
-}
-
-// Use the plain API (returns ONLY up to 1000 of your objects).
-try {
-	$objects = $s3->listObjects([
-		'Bucket' => $aws_bucket, 
-		'MaxKeys' => 1, 
-		'Marker' => $start, 
-	]);
-
-} catch (S3Exception $e) {
-	echo 'Something went terribly wrong :(';
-	die;
-}
-
-/**
- * ensure we have something
+ * init limit
  */
 if (
-	(empty($objects))
+	(empty($_GET['limit']))
 	||
-	(empty($objects['Contents']))
-	||
-	(empty($objects['Contents'][0]))
-	||
-	(empty($objects['Contents'][0]['Key']))
+	(!is_numeric($_GET['limit']))
 ){
-	echo 'You appear to have reach the end of the gallery.';
-	die;
+	$_GET['limit'] = 500;
 }
 
 /**
- * get raw/timestamp name
+ * Start output
  */
-$file_extension = pathinfo($objects['Contents'][0]['Key'], PATHINFO_EXTENSION);
-$timestamp_name = str_ireplace(
-	array('A', '-', $file_extension, '.'), 
-	'', 
-	$objects['Contents'][0]['Key']
-);
-$timestamp_name = trim($timestamp_name);
+echo <<<m_echo
 
-/**
- * rename if object is not named for unix timestamp
- * //note this helps us organize from newest to oldest
- */
-$new_name = $objects['Contents'][0]['Key'];
-if (
-	(!is_numeric($timestamp_name))
-	||
-	($timestamp_name < 1000)
-	||
-	($timestamp_name > time())
-){
-
-	$s3->registerStreamWrapper();
-
-	$new_name = $objects['Contents'][0]['LastModified']->format('U');
-
-	if (stripos($objects['Contents'][0]['Key'], 'IMG_') !== false){
-		$new_name = str_replace(
-			array('IMG_', '_', '.', $file_extension), 
-			' ', 
-			$objects['Contents'][0]['Key']
-		);
-		$new_name = trim($new_name);
-		if (!$new_name = strtotime($new_name)){
-			$new_name = $objects['Contents'][0]['LastModified']->format('U');
+	<style>
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
 		}
-	}
+		.image_container {
+			width:10rem;
+			height:7.5rem;
+			display:inline-flex;
+			border:1px solid #c3c3c3;
+			margin:0.1rem;
+		}
+	</style>
 
-	if (floatval($new_name)){
-		$timestamp_name = $new_name;
-		$new_name = "-{$new_name}";
-		rename("s3://{$aws_bucket}/{$objects['Contents'][0]['Key']}", "s3://{$aws_bucket}/{$new_name}");
-	}
+m_echo;
+
+/**
+ * loop through cache
+ */
+$year_month='';
+$image_count=0;
+foreach ($aws_cache AS $key=>$file){
+
+/**
+ * handle limit
+ */
+$image_count++;
+if (
+	($_GET['limit'])
+	&&
+	($image_count > $_GET['limit'])
+){
+	break;
+}
+
+/**
+ * output year/month
+ */
+if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
+	$year_month = "{$file['year_uploaded']}-{$file['month_uploaded']}";
+	echo "<h2>{$year_month}</h2>";
 }
 
 /**
@@ -104,49 +82,28 @@ if (
  */
 $cmd = $s3->getCommand('GetObject', [
 	'Bucket' => $aws_bucket,
-	'Key' => $new_name
+	'Key' => $file['file_name']
 ]);
 $request = $s3->createPresignedRequest($cmd, '+10 minutes');
 
 // Get the actual presigned-url
 $image_url = $request->getUri();
 
-/**
- * init delay time
- */
-$delay = 120;
-$delay = 2;//debug
-if (
-	(!empty($_GET['delay']))
-	&&
-	(is_numeric($_GET['delay']))
-	&&
-	($_GET['delay'])
-){
-	$delay = $_GET['delay'];
-}
-
-/**
- * setup header refresh to move onto next image
- */
-header("Refresh:{$delay};url=?start={$new_name}");
-
-/**
- * output image
- */
-$title = date('Y-m-d H:i', $timestamp_name);
 echo <<<m_echo
 
-	<style>
-		img {
-			width: 100vw;
-			height: 100vh;
-			object-fit: contain;
-		}
-	</style>
-	<h1>{$title}</h1>
-	<a href='?start={$new_name}'>
+<div class='image_container'>
+	<a href='view.php?file={$key}'>
 		<img src='{$image_url}' />
 	</a>
+</div>
 
 m_echo;
+
+/**
+ * done foreach
+ */
+}
+
+if (!$image_count){
+	echo "<h1>Sorry, looks like I don't have anything to show you.";
+}
