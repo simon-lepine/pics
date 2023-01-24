@@ -35,13 +35,14 @@ foreach ($objects as $object) {
 $timestamp_uploaded = $object['LastModified']->format('U');
 $file_extension = pathinfo($object['Key'], PATHINFO_EXTENSION);
 if (
-	(stripos($object['Key'], 'IMGG_') !== false)
+	(stripos($object['Key'], 'IMG_') !== false)
 ){
 	$tmp = str_ireplace(
 		array('IMG_', $file_extension, '.'), 
 		'', 
 		$object['Key']
 	);
+	$tmp = preg_replace("/[^0-9|_]/", '', $tmp);
 	$tmp = str_replace('_', ' ', $tmp);
 	$tmp = trim($tmp);
 	if (

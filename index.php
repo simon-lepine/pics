@@ -3,7 +3,7 @@
 include 'settings.inc.php';
 require "{$compoer_dir}autoload.php";
 include 'aws_cache.php';
-ksort($aws_cache);
+krsort($aws_cache);
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
