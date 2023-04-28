@@ -2,7 +2,8 @@
 
 include 'settings.inc.php';
 require "{$compoer_dir}autoload.php";
-include 'aws_cache.php';
+//include 'aws_cache.php';
+require 'get_all_cache_files.inc.php';
 krsort($aws_cache);
 
 use Aws\S3\S3Client;
@@ -27,6 +28,12 @@ if (
 ){
 	$_GET['limit'] = 500;
 }
+
+
+/**
+ * get cache directory
+ */
+$cache_dir = dirname(__FILE__) . '/.cache';
 
 /**
  * Start output
@@ -78,22 +85,34 @@ if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
 }
 
 /**
- * get a short-term URL
+ * confirm we have a thumbnail
  */
-$cmd = $s3->getCommand('GetObject', [
-	'Bucket' => $aws_bucket,
-	'Key' => $file['file_name']
-]);
-$request = $s3->createPresignedRequest($cmd, '+10 minutes');
+if (
+	(!empty($_GET['thumbnail_links']))
+	&&
+	(!file_exists("{$cache_dir}/{$file['file_name']}"))
+){
+echo <<<m_echo
 
-// Get the actual presigned-url
-$image_url = $request->getUri();
+<div class='image_container'>
+	<a href='create_thumbnail.php?file={$key}' target='_BLANK'>
+		Generate Thumbnail
+	</a>
+</div>
+
+m_echo;
+
+continue;
+}
+if (!file_exists("{$cache_dir}/{$file['file_name']}")){
+	continue;
+}
 
 echo <<<m_echo
 
 <div class='image_container'>
 	<a href='view.php?file={$key}'>
-		<img src='{$image_url}' />
+		<img src='.cache/{$file['file_name']}' />
 	</a>
 </div>
 

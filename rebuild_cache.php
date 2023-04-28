@@ -2,11 +2,16 @@
 
 include 'settings.inc.php';
 require "{$compoer_dir}autoload.php";
-include 'aws_cache.php';
+
+//include 'aws_cache.php';
+require 'get_all_cache_files.inc.php';
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
 
+/**
+ * get/set AWS creds
+ */
 $credentials = new Aws\Credentials\Credentials($aws_key, $aws_secret);
 
 // Instantiate the client.
@@ -60,8 +65,11 @@ if (
  * check if already exists and continue
  * ensuring only 1 entry per file in the cache (not that its a big deal since array keys will overwrite rather than duplicate)
  */
-if (!empty($aws_cache[ "{$timestamp_uploaded}-{$object['Key']}" ])){
-	echo "<p>{$timestamp_uploaded}-{$object['Key']} already exists.</p>";
+if (
+	(!empty($aws_cache[ "{$timestamp_uploaded}-{$object['Key']}" ]))
+	&&
+	(file_exists(".cache/{$timestamp_uploaded}-{$object['Key']}.php"))
+){
 	continue;
 }
 
@@ -90,7 +98,18 @@ $file_content = <<<m_var
 	'tags' => '',
 );
 m_var;
-file_put_contents('aws_cache.php', $file_content, FILE_APPEND);
+file_put_contents('aws_cache.php', $file_content, FILE_APPEND);//leftoff get rid of this
+
+/**
+ * write to .cache/*.php file
+ */
+$file_content = <<<m_var
+<?php
+
+{$file_content}
+
+m_var;
+file_put_contents(".cache/{$timestamp_uploaded}-{$object['Key']}.php", $file_content);
 
 /**
  * done foreach

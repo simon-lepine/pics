@@ -2,12 +2,14 @@
 
 include 'settings.inc.php';
 require "{$compoer_dir}autoload.php";
-include 'aws_cache.php';
-ksort($aws_cache);
+//include 'aws_cache.php';
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
 
+/**
+ * get/set AWS creds
+ */
 $credentials = new Aws\Credentials\Credentials($aws_key, $aws_secret);
 
 // Instantiate the client.
@@ -38,11 +40,19 @@ m_echo;
 if (
 	(empty($_GET['file']))
 	||
-	(empty($aws_cache[ $_GET['file'] ]))
+	(!$_GET['file'] = preg_replace("/[^a-zA-Z0-9-_.]/", "", "{$_GET['file']}"))
+	||
+	(!file_exists(".cache/{$_GET['file']}.php"))
 ){
 	echo "<h1>Sorry, looks like I don't have anything to show you.";
 	die;
 }
+
+/**
+ * get cache data
+ */
+$aws_cache=array();
+include(".cache/{$_GET['file']}.php");
 
 /**
  * get a short-term URL
