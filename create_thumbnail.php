@@ -1,7 +1,7 @@
 <?php
 
 include 'settings.inc.php';
-require "{$compoer_dir}autoload.php";
+require "{$composer_dir}autoload.php";
 include 'aws_cache.php';
 ksort($aws_cache);
 

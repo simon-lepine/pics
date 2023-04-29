@@ -12,6 +12,11 @@ if (realpath(__FILE__) == realpath($_SERVER['SCRIPT_FILENAME'])){
 }
 
 /**
+ * init cache
+ */
+$aws_cache=array();
+
+/**
  * get file list
  */
 if (
@@ -19,15 +24,15 @@ if (
     ||
     (empty($file_list))
 ){
-    echo 'Failed to get file cache.';
-    die;
+    $file_list=array();
 }
 
 /**
  * loop through AWS cache files
  * and include
  */
-$aws_cache=array();
+if (!empty($file_list)){
 foreach ($file_list AS $file_name){
     include $file_name;
+}
 }

@@ -1,8 +1,14 @@
 <?php
 
+include 'file_head.inc.php';
+
+echo '<pre>';
+print_r($_SERVER);
+echo '</pre>';
+die;
+
 include 'settings.inc.php';
-require "{$compoer_dir}autoload.php";
-//include 'aws_cache.php';
+require "{$composer_dir}autoload.php";
 require 'get_all_cache_files.inc.php';
 krsort($aws_cache);
 
@@ -26,7 +32,7 @@ if (
 	||
 	(!is_numeric($_GET['limit']))
 ){
-	$_GET['limit'] = 500;
+	$_GET['limit'] = 250;
 }
 
 
