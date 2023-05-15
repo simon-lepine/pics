@@ -22,7 +22,6 @@
  * We do not set log errors here as the sysadmin needs to make that decision
  */
 ini_set('display_errors', 0);
-ini_set('display_errors', 1);//debug
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
 /*

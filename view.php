@@ -91,6 +91,42 @@ m_echo;
 }
 
 /**
+ * get date
+ */
+$date_uploaded = '';
+if (!empty($aws_cache[ $_GET['file'] ]['timestamp_uploaded'])){
+	$date_uploaded = '<p>Taken At: ' . date('Y-m-d H:i', $aws_cache[ $_GET['file'] ]['timestamp_uploaded']) . '</p>';
+}
+
+/**
+ * build location URL
+ */
+$location = '';
+if (
+	(!empty($aws_cache[ $_GET['file'] ]['lat']))
+	&&
+	(!empty($aws_cache[ $_GET['file'] ]['long']))
+){
+$location =  <<<m_var
+	<p>
+		Location: 
+		<a href='https://www.openstreetmap.org/?mlat={$aws_cache[ $_GET['file'] ]['lat']}&mlon={$aws_cache[ $_GET['file'] ]['long']}&zoom=12#map=12/{$aws_cache[ $_GET['file'] ]['lat']}/{$aws_cache[ $_GET['file'] ]['long']}' target='_BLANK'>
+			{$aws_cache[ $_GET['file'] ]['lat']}/{$aws_cache[ $_GET['file'] ]['long']} (approx)
+		</a>
+	</p>
+m_var;
+}
+
+/**
+ * get notes/description
+ */
+$notes = '';
+if (!empty($aws_cache[ $_GET['file'] ]['notest'])){
+	$notes = "<div>{$aws_cache[ $_GET['file'] ]['notes']}</div>";
+}
+
+
+/**
  * output HTM:
  */
 echo <<<m_echo
@@ -126,6 +162,12 @@ img {
 {$prev}
 
 <h2>{$aws_cache[ $_GET['file'] ]['file_name']}</h2>
+
+{$date_uploaded}
+
+{$location}
+
+{$notes}
 
 m_echo;
 

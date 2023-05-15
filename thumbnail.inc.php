@@ -45,6 +45,34 @@ if (!is_dir($this->cache_dir)){
  */
 }
 
+/**
+ * //function to get GPS lat/long
+ * source: https://stackoverflow.com/questions/2526304/php-extract-gps-exif-data
+ */
+function gps_lat_long($coordinate, $hemisphere) {
+	if (is_string($coordinate)) {
+	  $coordinate = array_map("trim", explode(",", $coordinate));
+	}
+	for ($i = 0; $i < 3; $i++) {
+	  $part = explode('/', $coordinate[$i]);
+	  if (count($part) == 1) {
+		$coordinate[$i] = $part[0];
+	  } else if (count($part) == 2) {
+		$coordinate[$i] = floatval($part[0])/floatval($part[1]);
+	  } else {
+		$coordinate[$i] = 0;
+	  }
+	}
+	list($degrees, $minutes, $seconds) = $coordinate;
+	$sign = ($hemisphere == 'W' || $hemisphere == 'S') ? -1 : 1;
+	return $sign * ($degrees + $minutes/60 + $seconds/3600);
+
+/**
+ * done //function
+ */
+}
+  
+
 function create($values){
 
 /**
@@ -89,7 +117,9 @@ if (
 	&&
 	(file_exists("{$this->cache_dir}/{$values['name']}"))
 ){
-	return true;
+	return array(
+		'success' => 1, 
+	);
 }
 
 /**
@@ -106,9 +136,57 @@ try {
     exit("Please fix the error with file downloading before continuing.");
 }
 
-// Maximum width and height
-$width = 250;
-$height = 250;
+/**
+ * init reutrn array
+ */
+$return=array();
+
+/**
+ * read exif data and build return
+ * //note we must do this BEFORE thumbnail
+ */
+$exif = exif_read_data("{$this->cache_dir}/{$values['name']}");
+if (
+	(!empty($exif))
+	&&
+	(!empty($exif["GPSLatitude"]))
+	&&
+	(!empty($exif['GPSLatitudeRef']))
+){
+	$return['lat'] = $this->gps_lat_long($exif["GPSLatitude"], $exif['GPSLatitudeRef']);
+}
+if (
+	(!empty($exif))
+	&&
+	(!empty($exif["GPSLongitude"]))
+	&&
+	(!empty($exif['GPSLongitudeRef']))
+){
+	$return['long'] = $this->gps_lat_long($exif["GPSLongitude"], $exif['GPSLongitudeRef']);
+}
+if (
+	(!empty($exif))
+	&&
+	(!empty($exif["DateTimeOriginal"]))
+){
+	$return['original_timestamp'] = strtotime($exif['DateTimeOriginal']);
+}
+
+/**
+ * //debug
+ *
+echo <<<m_echo
+<p><a href='https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}&zoom=12#map=18/{$latitude}/{$longitude}' target='_BLANK'>
+https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}&zoom=12#map=18/{$latitude}/{$longitude}
+</a></p>
+m_echo;
+die;
+
+/**
+ * set max height/width for thumbnail
+ */
+$width = 175;
+$height = 175;
   
 // Get new dimensions
 list($width_orig, $height_orig) = getimagesize("{$this->cache_dir}/{$values['name']}");
@@ -147,7 +225,8 @@ if ($file_extension == 'png'){
 /**
  * return success
  */
-return true;
+$return['success']=1;
+return $return;
 
 
 /**

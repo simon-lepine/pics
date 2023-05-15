@@ -2,11 +2,6 @@
 
 include 'file_head.inc.php';
 
-echo '<pre>';
-print_r($_SERVER);
-echo '</pre>';
-die;
-
 include 'settings.inc.php';
 require "{$composer_dir}autoload.php";
 require 'get_all_cache_files.inc.php';
@@ -93,23 +88,6 @@ if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
 /**
  * confirm we have a thumbnail
  */
-if (
-	(!empty($_GET['thumbnail_links']))
-	&&
-	(!file_exists("{$cache_dir}/{$file['file_name']}"))
-){
-echo <<<m_echo
-
-<div class='image_container'>
-	<a href='create_thumbnail.php?file={$key}' target='_BLANK'>
-		Generate Thumbnail
-	</a>
-</div>
-
-m_echo;
-
-continue;
-}
 if (!file_exists("{$cache_dir}/{$file['file_name']}")){
 	continue;
 }
@@ -117,8 +95,8 @@ if (!file_exists("{$cache_dir}/{$file['file_name']}")){
 echo <<<m_echo
 
 <div class='image_container'>
-	<a href='view.php?file={$key}'>
-		<img src='.cache/{$file['file_name']}' />
+	<a href='{$_SERVER['class']['constants']->server_url}/view.php?file={$key}'>
+		<img src='{$_SERVER['class']['constants']->server_url}/.cache/{$file['file_name']}' />
 	</a>
 </div>
 

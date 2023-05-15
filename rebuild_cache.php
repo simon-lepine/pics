@@ -26,6 +26,7 @@ if (
 	($api_security_key != $_GET['api_security_key'])
 ){
 	echo 'Something went terribly wrong. :(';
+	die;
 	
 	header('Status: 404 Not Found', false);
 	header('Location: https://lakebed.io', false);
@@ -56,6 +57,14 @@ $s3 = new S3Client([
 $objects = $s3->getIterator('ListObjects', [
 	'Bucket' => $aws_bucket,
 ]);
+
+/**
+ * get/set force
+ */
+$force = 0;
+if (!empty($_GET['force'])){
+	$force = $_GET['force'];
+}
 
 /**
  * create cache_cache file
@@ -98,6 +107,8 @@ if (
 	(!empty($aws_cache[ "{$timestamp_uploaded}-{$object['Key']}" ]))
 	&&
 	(file_exists(".cache/{$timestamp_uploaded}-{$object['Key']}.php"))
+	&&
+	(empty($force))
 ){
 	continue;
 }
@@ -105,13 +116,27 @@ if (
 /**
  * create thumbnail
  */
-$thumbnail->create(array(
+$result = $thumbnail->create(array(
 	'name' => $object['Key'], 
+	'force' => $force, 
 ));
+
+/**
+ * get lat/long
+ */
+if (empty($result['lat'])){
+	$result['lat'] = '';
+}
+if (empty($result['long'])){
+	$result['long'] = '';
+}
 
 /**
  * get date info
  */
+if (!empty($result['original_timestamp'])){
+	$timestamp_uploaded = $result['original_timestamp'];
+}
 $month_uploaded = date('m', $timestamp_uploaded);
 $month_uploaded = str_pad($month_uploaded, 2, '0', STR_PAD_LEFT);
 $year_uploaded = date('Y', $timestamp_uploaded);
@@ -129,6 +154,8 @@ $file_content = <<<m_var
 	'size' => {$object['Size']}, 
 	'year_uploaded' => '{$year_uploaded}', 
 	'month_uploaded' => '{$month_uploaded}', 
+	'lat' => '{$result['lat']}',
+	'long' => '{$result['long']}',
 	'notes' => '', 
 	'tags' => '',
 );
