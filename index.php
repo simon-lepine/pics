@@ -27,7 +27,7 @@ if (
 	||
 	(!is_numeric($_GET['limit']))
 ){
-	$_GET['limit'] = 250;
+	$_GET['limit'] = 500;
 }
 
 
@@ -39,6 +39,7 @@ $cache_dir = dirname(__FILE__) . '/.cache';
 /**
  * Start output
  */
+$get_url = http_build_query($_GET);
 echo <<<m_echo
 
 	<style>
@@ -56,6 +57,15 @@ echo <<<m_echo
 		}
 	</style>
 
+	<h2>Display Limit ({$_GET['limit']} Currently)</h2>
+	<ul>
+		<li><a href='?{$get_url}&limit=200'>200</a>
+		<li><a href='?{$get_url}&limit=500'>500</a>
+		<li><a href='?{$get_url}&limit=1000'>1000</a>
+		<li><a href='?{$get_url}&limit=9999'>9999</a>
+		<li><a href='?{$get_url}&limit=999999'>999999</a>
+	</ul>
+
 m_echo;
 
 /**
@@ -63,6 +73,7 @@ m_echo;
  */
 $year_month='';
 $image_count=0;
+$prevent_duplicates=array();
 foreach ($aws_cache AS $key=>$file){
 
 /**
@@ -91,6 +102,17 @@ if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
 if (!file_exists("{$cache_dir}/{$file['file_name']}")){
 	continue;
 }
+
+/**
+ * prevent duplicates
+ */
+$tmp = sha1_file("{$cache_dir}/{$file['file_name']}");
+$tmp = "{$file['year_uploaded']}-{$file['month_uploaded']}-{$file['size']}-{$tmp}";
+if (!empty($prevent_duplicates[ $tmp ])){
+	//leftoff echo '<p>Duplicate found.</p>';
+	continue;
+}
+$prevent_duplicates[ $tmp ] = $tmp;
 
 echo <<<m_echo
 

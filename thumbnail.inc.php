@@ -71,81 +71,38 @@ function gps_lat_long($coordinate, $hemisphere) {
  * done //function
  */
 }
-  
-
-function create($values){
 
 /**
- * get settings
+ * //function to get exif data
  */
-include 'settings.inc.php';
+function get_exit($file_name=''){
 
 /**
- * get/sanitize file extension
+ * confirm we have data
  */
 if (
-	(!$file_extension = pathinfo($values['name']))
+	(empty($file_name))
 	||
-	(!is_array($file_extension))
+	(!is_string($file_name))
 	||
-	(empty($file_extension['extension']))
-	||
-	(!$file_extension = strtolower($file_extension['extension']))
+	(!file_exists($file_name))
 ){
-	echo '<h1>Failed to get file path info.</h1>';
-	die;
-}
-
-/**
- * convert jpeg to jpg
- */
-$file_extension = str_ireplace('e', '', $file_extension);
-if (
-	($file_extension != 'jpg')
-	&&
-	($file_extension != 'png')
-){
-	echo "{$file_extension} is an unsupported format.";
-	die;
-}
-
-/**
- * check if thumbnail already exists
- */
-if (
-	(empty($values['force']))
-	&&
-	(file_exists("{$this->cache_dir}/{$values['name']}"))
-){
-	return array(
-		'success' => 1, 
-	);
-}
-
-/**
- * try/catch to get file content
- */
-try {
-    $file = $this->s3->getObject([
-		'Bucket' => $aws_bucket,
-		'Key' => $values['name'], 
-		'SaveAs' => "{$this->cache_dir}/{$values['name']}", 
-    ]);
-} catch (Exception $exception) {
-    echo "Failed to download {$values['name']} from $bucket_name with error: " . $exception->getMessage();
-    exit("Please fix the error with file downloading before continuing.");
+	return false;
 }
 
 /**
  * init reutrn array
  */
-$return=array();
+$return=array(
+	'success' => 1, 
+);
 
 /**
  * read exif data and build return
  * //note we must do this BEFORE thumbnail
  */
-$exif = exif_read_data("{$this->cache_dir}/{$values['name']}");
+//$exif = exif_read_data("{$this->cache_dir}/{$values['name']}");
+$exif = exif_read_data($file_name);
 if (
 	(!empty($exif))
 	&&
@@ -170,6 +127,79 @@ if (
 	(!empty($exif["DateTimeOriginal"]))
 ){
 	$return['original_timestamp'] = strtotime($exif['DateTimeOriginal']);
+}
+
+/**
+ * done //functions
+ */
+}
+
+function create($values){
+
+/**
+ * get settings
+ */
+include 'settings.inc.php';
+
+/**
+ * get/sanitize file extension
+ */
+if (
+	(!$file_extension = pathinfo($values['name']))
+	||
+	(!is_array($file_extension))
+	||
+	(empty($file_extension['extension']))
+	||
+	(!$file_extension = strtolower($file_extension['extension']))
+){
+	echo '<h1>Failed to get file path info.</h1>';
+	return false;
+}
+
+/**
+ * convert jpeg to jpg
+ */
+$file_extension = str_ireplace('e', '', $file_extension);
+if (
+	($file_extension != 'jpg')
+	&&
+	($file_extension != 'png')
+){
+	echo "{$file_extension} is an unsupported format.";
+	return false;
+}
+
+/**
+ * check if thumbnail already exists
+ */
+if (
+	(empty($values['force']))
+	&&
+	(file_exists("{$this->cache_dir}/{$values['name']}"))
+){
+	return $this->get_exit("{$this->cache_dir}/{$values['name']}");
+}
+
+/**
+ * try/catch to get file content
+ */
+try {
+    $file = $this->s3->getObject([
+		'Bucket' => $aws_bucket,
+		'Key' => $values['name'], 
+		'SaveAs' => "{$this->cache_dir}/{$values['name']}", 
+    ]);
+} catch (Exception $exception) {
+    echo "Failed to download {$values['name']} from $bucket_name with error: " . $exception->getMessage();
+    exit("Please fix the error with file downloading before continuing.");
+}
+
+/**
+ * get exif
+ */
+if (!$return = $this->get_exit("{$this->cache_dir}/{$values['name']}")){
+	return false;
 }
 
 /**
@@ -238,5 +268,3 @@ return $return;
  * done class
  */
 }
-
-//leftoff write this and impliment in rebuild_cache

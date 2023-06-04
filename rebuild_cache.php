@@ -4,7 +4,6 @@
  * set max execution time
  */
 ini_set('max_execution_time', 3600);
-
 include 'settings.inc.php';
 require "{$composer_dir}autoload.php";
 
@@ -33,23 +32,6 @@ if (
 	die;
 }
 
-
-
-$tmp = '2012-12-22-211722_9544711144_o.jpg';
-$tmp = str_ireplace('_', '-', $tmp);
-$tmp = explode('-', $tmp);
-/**
- * $tmp[0] year
- * $tmp[1] month
- * $tmp[2] day
- * tmp[3] time
- */
-$tmp[3] = substr_replace($tmp[3], ':', 2, 0);
-$tmp[3] = substr_replace($tmp[3], ':', 5, 0);
-echo "{$tmp[0]}-{$tmp[1]}-{$tmp[2]} $tmp[3]";
-die;
-
-
 /**
  * use AWS composer packages
  */
@@ -75,6 +57,7 @@ $objects = $s3->getIterator('ListObjects', [
 	'Bucket' => $aws_bucket,
 ]);
 
+
 /**
  * get/set force
  */
@@ -94,20 +77,21 @@ foreach ($objects as $object) {
  */
 $timestamp_uploaded = $object['LastModified']->format('U');
 
+
 /**
  * timestamp uploaded of camera pictures
  */
 $file_extension = pathinfo($object['Key'], PATHINFO_EXTENSION);
 if (
 	(stripos($object['Key'], 'IMG_') !== false)
+	&&
+	(stripos($object['Key'], '-') !== false)
 ){
-	$tmp = str_ireplace(
-		array('IMG_', $file_extension, '.'), 
-		'', 
-		$object['Key']
-	);
-	$tmp = preg_replace("/[^0-9|_]/", '', $tmp);
+	$tmp = preg_replace("/[^0-9 _]/", '', $object['Key']);
 	$tmp = str_replace('_', ' ', $tmp);
+	if ((stripos($tmp, '-') === false)){
+		$tmp = substr($tmp, 0, 15);
+	}
 	$tmp = trim($tmp);
 	if (
 		(strpos($tmp, ' ') !== false)
@@ -126,19 +110,51 @@ if (
 if (
 	(stripos($object['Key'], '-'))
 	&&
-	(stripos($object['Key'], '_o.'))
+	(
+		(stripos($object['Key'], '_o'))
+		||
+		(stripos($object['Key'], '_n'))
+	)
 ){
 	$tmp = str_ireplace('_', '-', $object['Key']);
 	$tmp = explode('-', $tmp);
 	/**
-	 * $tmp[0] year
-	 * $tmp[1] month
-	 * $tmp[2] day
+	 * tmp[0] year
+	 * tmp[1] month
+	 * tmp[2] day
 	 * tmp[3] time
 	 */
 	$tmp[3] = substr_replace($tmp[3], ':', 2, 0);
 	$tmp[3] = substr_replace($tmp[3], ':', 5, 0);
 	$timestamp_uploaded = strtotime("{$tmp[0]}-{$tmp[1]}-{$tmp[2]} $tmp[3]");
+}
+
+
+if (
+	(stripos($object['Key'], '-') === false)
+	&&
+	(stripos($object['Key'], '_o'))
+	&&
+	($timestamp_uploaded == $object['LastModified']->format('U'))
+){
+	$tmp = explode('_', $object['Key']);
+	$tmp[0] = substr_replace($tmp[0], '-', 4, 0);
+	$tmp[0] = substr_replace($tmp[0], '-', 7, 0);
+
+	$tmp[1] = substr_replace($tmp[1], ':', 2, 0);
+	$tmp[1] = substr_replace($tmp[1], ':', 5, 0);
+	$timestamp_uploaded = strtotime("{$tmp[0]} {$tmp[1]}");
+}
+
+/**
+ * set date for .png files
+ */
+if (
+	(stripos("{$object['Key']}!!!!!!!!!!!", '.png!!!!!!!!!!!') !== false)
+	&&
+	($timestamp_uploaded == $object['LastModified']->format('U'))
+){
+	$timestamp_uploaded = strtotime("2020-06-01 00:00:00");
 }
 
 /**
@@ -162,6 +178,9 @@ $result = $thumbnail->create(array(
 	'name' => $object['Key'], 
 	'force' => $force, 
 ));
+if (!$result){
+	continue;
+}
 
 /**
  * get lat/long
@@ -184,16 +203,24 @@ $month_uploaded = str_pad($month_uploaded, 2, '0', STR_PAD_LEFT);
 $year_uploaded = date('Y', $timestamp_uploaded);
 
 /**
+ * ensure we have an uploaded timestamp
+ */
+if (empty($timestamp_uploaded)){
+	echo "<p>No upload timestamp for {$object['Key']}.</p>";
+	continue;
+}
+
+
+/**
  * create file content
- * and write to file
  */
 $file_content = <<<m_var
-
+<?php
 
 \$aws_cache[ '{$timestamp_uploaded}-{$object['Key']}' ] = array(
 	'file_name' => '{$object['Key']}', 
-	'timestamp_uploaded' => {$timestamp_uploaded}, 
-	'size' => {$object['Size']}, 
+	'timestamp_uploaded' => '{$timestamp_uploaded}', 
+	'size' => '{$object['Size']}', 
 	'year_uploaded' => '{$year_uploaded}', 
 	'month_uploaded' => '{$month_uploaded}', 
 	'lat' => '{$result['lat']}',
@@ -201,20 +228,11 @@ $file_content = <<<m_var
 	'notes' => '', 
 	'tags' => '',
 );
-m_var;
-//file_put_contents('aws_cache.php', $file_content, FILE_APPEND);//leftoff get rid of this
-
-/**
- * write to .cache/*.php file
- */
-$file_content = <<<m_var
-<?php
-
-{$file_content}
 
 m_var;
+
 /**
- * //debug
+ * //file put contents
  */
 file_put_contents(".cache/{$timestamp_uploaded}-{$object['Key']}.php", $file_content);
 
