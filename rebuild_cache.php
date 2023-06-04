@@ -33,6 +33,23 @@ if (
 	die;
 }
 
+
+
+$tmp = '2012-12-22-211722_9544711144_o.jpg';
+$tmp = str_ireplace('_', '-', $tmp);
+$tmp = explode('-', $tmp);
+/**
+ * $tmp[0] year
+ * $tmp[1] month
+ * $tmp[2] day
+ * tmp[3] time
+ */
+$tmp[3] = substr_replace($tmp[3], ':', 2, 0);
+$tmp[3] = substr_replace($tmp[3], ':', 5, 0);
+echo "{$tmp[0]}-{$tmp[1]}-{$tmp[2]} $tmp[3]";
+die;
+
+
 /**
  * use AWS composer packages
  */
@@ -76,6 +93,10 @@ foreach ($objects as $object) {
  * get timestamp_uploaded
  */
 $timestamp_uploaded = $object['LastModified']->format('U');
+
+/**
+ * timestamp uploaded of camera pictures
+ */
 $file_extension = pathinfo($object['Key'], PATHINFO_EXTENSION);
 if (
 	(stripos($object['Key'], 'IMG_') !== false)
@@ -97,6 +118,27 @@ if (
 	){
 		$timestamp_uploaded = $tmp;
 	}
+}
+
+/**
+ * timestamp uploaded of flickr images
+ */
+if (
+	(stripos($object['Key'], '-'))
+	&&
+	(stripos($object['Key'], '_o.'))
+){
+	$tmp = str_ireplace('_', '-', $object['Key']);
+	$tmp = explode('-', $tmp);
+	/**
+	 * $tmp[0] year
+	 * $tmp[1] month
+	 * $tmp[2] day
+	 * tmp[3] time
+	 */
+	$tmp[3] = substr_replace($tmp[3], ':', 2, 0);
+	$tmp[3] = substr_replace($tmp[3], ':', 5, 0);
+	$timestamp_uploaded = strtotime("{$tmp[0]}-{$tmp[1]}-{$tmp[2]} $tmp[3]");
 }
 
 /**
@@ -180,5 +222,3 @@ file_put_contents(".cache/{$timestamp_uploaded}-{$object['Key']}.php", $file_con
  * done foreach
  */
 }
-
-
