@@ -156,6 +156,10 @@ img {
 }
 </style>
 
+<p><a href='../'>
+	Back To Image Index
+</a></p>
+
 <img src='{$image_url}' />
 
 {$next}
@@ -170,4 +174,3 @@ img {
 {$notes}
 
 m_echo;
-

@@ -7,17 +7,6 @@ require "{$composer_dir}autoload.php";
 require 'get_all_cache_files.inc.php';
 krsort($aws_cache);
 
-use Aws\S3\S3Client;
-use Aws\S3\Exception\S3Exception;
-
-$credentials = new Aws\Credentials\Credentials($aws_key, $aws_secret);
-
-// Instantiate the client.
-$s3 = new S3Client([
-	'credentials' => $credentials, 
-	'version' => 'latest',
-	'region'  => $aws_region, 
-]);
 
 /**
  * init limit
@@ -61,9 +50,9 @@ echo <<<m_echo
 	<ul>
 		<li><a href='?{$get_url}&limit=200'>200</a>
 		<li><a href='?{$get_url}&limit=500'>500</a>
-		<li><a href='?{$get_url}&limit=1000'>1000</a>
-		<li><a href='?{$get_url}&limit=9999'>9999</a>
-		<li><a href='?{$get_url}&limit=999999'>999999</a>
+		<li><a href='?{$get_url}&limit=1000'>1,000</a>
+		<li><a href='?{$get_url}&limit=10000'>10,000</a>
+		<li><a href='?{$get_url}&limit=99999999'>All</a>
 	</ul>
 
 m_echo;
@@ -93,8 +82,13 @@ if (
  */
 if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
 	$year_month = "{$file['year_uploaded']}-{$file['month_uploaded']}";
-	echo "<h2>{$year_month}</h2>";
+	if ($file['year_uploaded'] < 1982){
+		echo "<h2>Old, Uknown Date</h2>";
+	} else{
+		echo "<h2>{$year_month}</h2>";
+	}
 }
+
 
 /**
  * confirm we have a thumbnail

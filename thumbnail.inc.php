@@ -73,9 +73,78 @@ function gps_lat_long($coordinate, $hemisphere) {
 }
 
 /**
+ * //function to convert string to date
+ */
+function string_to_timestamp($string=''){
+
+if (
+	(empty($string))
+	||
+	(!is_string($string))
+){
+	return false;
+}
+
+
+/**
+ * handle timestamp in file name
+ */
+if (
+	(strpos($string, '-'))
+	&&
+	($tmp = explode('-', $string))
+	&&
+	($tmp = $tmp[0])
+	&&
+	(strlen($tmp) > 9)
+	&&
+	(is_numeric($tmp))
+	&&
+	(date('Y-m', $tmp) == '2023-06')
+){
+	return 100;
+}
+
+
+$tmp = preg_replace("/[^0-9]/", '', $string);
+if (strlen($tmp) < 14){
+	return false;
+}
+
+$tmp = substr_replace($tmp, '-', 4, 0);
+$tmp = substr_replace($tmp, '-', 7, 0);
+
+$tmp = substr_replace($tmp, ' ', 10, 0);
+
+$tmp = substr_replace($tmp, ':', 13, 0);
+$tmp = substr_replace($tmp, ':', 16, 0);
+
+if (strlen($tmp) > 19){
+	$tmp = substr_replace($tmp, '', 19, strlen($tmp));
+}
+
+/**
+ * string to time
+ */
+if (!$tmp = strtotime($tmp)){
+	return 100;
+}
+
+/**
+ * return
+ */
+return $tmp;
+
+
+/**
+ * done //function
+ */
+}
+
+/**
  * //function to get exif data
  */
-function get_exit($file_name=''){
+function get_exif($file_name=''){
 
 /**
  * confirm we have data
@@ -103,6 +172,10 @@ $return=array(
  */
 //$exif = exif_read_data("{$this->cache_dir}/{$values['name']}");
 $exif = exif_read_data($file_name);
+
+/**
+ * get lat/long
+ */
 if (
 	(!empty($exif))
 	&&
@@ -121,13 +194,33 @@ if (
 ){
 	$return['long'] = $this->gps_lat_long($exif["GPSLongitude"], $exif['GPSLongitudeRef']);
 }
+
+/**
+ * get date/time
+ */
 if (
 	(!empty($exif))
 	&&
 	(!empty($exif["DateTimeOriginal"]))
+	&&
+	(empty($return['original_timestamp']))
 ){
 	$return['original_timestamp'] = strtotime($exif['DateTimeOriginal']);
 }
+if (
+	(!empty($exif))
+	&&
+	(!empty($exif["DateTime"]))
+	&&
+	(empty($return['original_timestamp']))
+){
+	$return['original_timestamp'] = strtotime($exif['DateTime']);
+}
+
+/**
+ * return success
+ */
+return $return;
 
 /**
  * done //functions
@@ -140,6 +233,19 @@ function create($values){
  * get settings
  */
 include 'settings.inc.php';
+
+/**
+ * ensure we have data
+ */
+if (
+	(empty($values))
+	||
+	(!is_array($values))
+	||
+	(empty($values['name']))
+){
+	return false;
+}
 
 /**
  * get/sanitize file extension
@@ -178,7 +284,7 @@ if (
 	&&
 	(file_exists("{$this->cache_dir}/{$values['name']}"))
 ){
-	return $this->get_exit("{$this->cache_dir}/{$values['name']}");
+	return $this->get_exif("{$this->cache_dir}/{$values['name']}");
 }
 
 /**
@@ -198,19 +304,15 @@ try {
 /**
  * get exif
  */
-if (!$return = $this->get_exit("{$this->cache_dir}/{$values['name']}")){
+if (!$return = $this->get_exif("{$this->cache_dir}/{$values['name']}")){
 	return false;
 }
+$return['success']=1;
 
 /**
- * //debug
- *
-echo <<<m_echo
-<p><a href='https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}&zoom=12#map=18/{$latitude}/{$longitude}' target='_BLANK'>
-https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}&zoom=12#map=18/{$latitude}/{$longitude}
-</a></p>
-m_echo;
-die;
+ * get file hash
+ */
+$return['file_hash'] = sha1_file("{$this->cache_dir}/{$values['name']}");
 
 /**
  * set max height/width for thumbnail
@@ -220,9 +322,22 @@ $height = 175;
   
 // Get new dimensions
 list($width_orig, $height_orig) = getimagesize("{$this->cache_dir}/{$values['name']}");
-  
-$ratio_orig = $width_orig/$height_orig;
-  
+
+/**
+ * don't thumbnail if already small
+ */
+if (
+	($width_orig < ($width * 2))
+	||
+	($height_orig < ($height * 2))
+){
+	return $return;
+}
+
+/**
+ * calc thumbnail size
+ */
+$ratio_orig = $width_orig/$height_orig;  
 if ($width/$height > $ratio_orig) {
     $width = $height*$ratio_orig;
 } else {
@@ -255,7 +370,6 @@ if ($file_extension == 'png'){
 /**
  * return success
  */
-$return['success']=1;
 return $return;
 
 
