@@ -80,11 +80,16 @@ if (
 /**
  * output year/month
  */
-if ($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}"){
-	$year_month = "{$file['year_uploaded']}-{$file['month_uploaded']}";
+if (
+	($year_month != 'OLD')
+	&&
+	($year_month != "{$file['year_uploaded']}-{$file['month_uploaded']}")
+){
 	if ($file['year_uploaded'] < 1982){
-		echo "<h2>Old, Uknown Date</h2>";
+		echo "<h2>Old or Uknown Date</h2>";
+		$year_month = 'OLD';
 	} else{
+		$year_month = "{$file['year_uploaded']}-{$file['month_uploaded']}";
 		echo "<h2>{$year_month}</h2>";
 	}
 }
