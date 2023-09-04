@@ -272,7 +272,11 @@ if (
 	&&
 	($file_extension != 'png')
 ){
-	echo "{$file_extension} is an unsupported format.";
+echo <<<m_echo
+	<p>
+		{$file_extension} ({$values['name']}) is an unsupported format.
+	</p>
+m_echo;
 	return false;
 }
 
